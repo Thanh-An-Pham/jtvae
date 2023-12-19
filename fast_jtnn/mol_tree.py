@@ -18,21 +18,20 @@ class MolTreeNode(object):
     def recover(self, original_mol):
         clique = []
         clique.extend(self.clique)
-        if not self.is_leaf:
+        if not self.is_leaf:                                                
             for cidx in self.clique:
-                original_mol.GetAtomWithIdx(cidx).SetAtomMapNum(self.nid)
+                original_mol.GetAtomWithIdx(cidx).SetAtomMapNum(self.nid)    #set the substruct attach to the id of node set in line 91
 
-        for nei_node in self.neighbors:
-            clique.extend(nei_node.clique)
+        for nei_node in self.neighbors:                                      #neighbors contain node neighbor
             if nei_node.is_leaf: #Leaf node, no need to mark 
                 continue
-            for cidx in nei_node.clique:
-                #allow singleton node override the atom mapping
-                if cidx not in self.clique or len(nei_node.clique) == 1:
+            for cidx in nei_node.clique:                                     #call node.clique is the clique in line 12
+                #allow singleton node override the atom mapping                 #A singleton node refers to a node in the clique that forms a clique by itself (contains only one atom).
+                if cidx not in self.clique or len(nei_node.clique) == 1:        #check idx in clique of neighbor node not in the current node or just a singleton 
                     atom = original_mol.GetAtomWithIdx(cidx)
                     atom.SetAtomMapNum(nei_node.nid)
 
-        clique = list(set(clique))
+        clique = list(set(clique))                                                              #not too clearly
         label_mol = get_clique_mol(original_mol, clique)
         self.label = Chem.MolToSmiles(Chem.MolFromSmiles(get_smiles(label_mol)))
 
@@ -69,26 +68,26 @@ class MolTree(object):
         #self.smiles2D = Chem.MolToSmiles(mol)
         #self.stereo_cands = decode_stereo(self.smiles2D)
 
-        cliques, edges = tree_decomp(self.mol)
+        cliques, edges = tree_decomp(self.mol)                              #tree_decompose in chemutils.py
         self.nodes = []
         root = 0
         for i,c in enumerate(cliques):
-            cmol = get_clique_mol(self.mol, c)
+            cmol = get_clique_mol(self.mol, c)                              #get the mol of each clique
             node = MolTreeNode(get_smiles(cmol), c)
             self.nodes.append(node)
-            if min(c) == 0: root = i
+            if min(c) == 0: root = i                                        #finding root node by find clique contain atom has index 0 
 
-        for x,y in edges:
+        for x,y in edges:                                                   #edge contain index of clique that connected
             self.nodes[x].add_neighbor(self.nodes[y])
             self.nodes[y].add_neighbor(self.nodes[x])
         
-        if root > 0:
-            self.nodes[0],self.nodes[root] = self.nodes[root],self.nodes[0]
+        if root > 0:                                                        #ensuring that the identified root node is positioned at index 0 in the self.nodes
+            self.nodes[0],self.nodes[root] = self.nodes[root],self.nodes[0] #swaps the positions of these two nodes
 
         for i,node in enumerate(self.nodes):
             node.nid = i + 1
             if len(node.neighbors) > 1: #Leaf node mol is not marked
-                set_atommap(node.mol, node.nid)
+                set_atommap(node.mol, node.nid)                             #Set the ID of each node (the mol of each clique), no neighbor = leaf
             node.is_leaf = (len(node.neighbors) == 1)
 
     def size(self):
@@ -96,7 +95,7 @@ class MolTree(object):
 
     def recover(self):
         for node in self.nodes:
-            node.recover(self.mol)
+            node.recover(self.mol)                                          #recover in Mol_Tree Node
 
     def assemble(self):
         for node in self.nodes:

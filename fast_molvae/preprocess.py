@@ -10,7 +10,7 @@ from fast_jtnn import *
 import rdkit
 
 def tensorize(smiles, assm=True):
-    mol_tree = MolTree(smiles)
+    mol_tree = MolTree(smiles)              #class MolTree in ./fast_jtnn/mol_tree.py => use function in ./fast_jtnn/chemutils.py
     mol_tree.recover()
     if assm:
         mol_tree.assemble()

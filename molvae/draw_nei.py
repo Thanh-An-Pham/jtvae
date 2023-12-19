@@ -10,6 +10,8 @@ import rdkit.Chem as Chem
 from rdkit.Chem import Draw
 
 import numpy as np
+sys.path.append('/Users/anpham/Documents/GitHub/jtvae')
+
 from jtnn import *
 
 lg = rdkit.RDLogger.logger() 

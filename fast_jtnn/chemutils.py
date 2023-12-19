@@ -77,33 +77,35 @@ def tree_decomp(mol):
     if n_atoms == 1: #special case
         return [[0]], []
 
-    cliques = []
-    for bond in mol.GetBonds():
+    cliques = []                                #contain bonds not in rings with format [ [begin_atom1;end_atoms1],[begin_atom2;end_atoms2] ]
+    for bond in mol.GetBonds():                     
         a1 = bond.GetBeginAtom().GetIdx()
         a2 = bond.GetEndAtom().GetIdx()
         if not bond.IsInRing():
             cliques.append([a1,a2])
 
-    ssr = [list(x) for x in Chem.GetSymmSSSR(mol)]
-    cliques.extend(ssr)
+    ssr = [list(x) for x in Chem.GetSymmSSSR(mol)]          #add index of atom in rings [a1,a2,a3,a4], [a7,a5,a3,a4]
+    cliques.extend(ssr)                     
 
-    nei_list = [[] for i in range(n_atoms)]
+    nei_list = [[] for i in range(n_atoms)]                 #nei_list = sublist (represent for each atom) in a list
     for i in range(len(cliques)):
         for atom in cliques[i]:
-            nei_list[atom].append(i)
+            nei_list[atom].append(i)                        #each sublist contain the information clique order that atom at
     
     #Merge Rings with intersection > 2 atoms
     for i in range(len(cliques)):
-        if len(cliques[i]) <= 2: continue
+        if len(cliques[i]) <= 2: continue                   #if this is bond => move to next 
         for atom in cliques[i]:
             for j in nei_list[atom]:
-                if i >= j or len(cliques[j]) <= 2: continue
+                if i >= j or len(cliques[j]) <= 2: continue     #If i>j reduce the double time check between two clique, which is redundancy
                 inter = set(cliques[i]) & set(cliques[j])
-                if len(inter) > 2:
+                if len(inter) > 2:                              # two cliques are found to have an intersection of more than two atoms => merging
                     cliques[i].extend(cliques[j])
                     cliques[i] = list(set(cliques[i]))
-                    cliques[j] = []
+                    cliques[j] = []                             #Merge and remove clique bigger
     
+
+    #Clear back the nei_list after merging
     cliques = [c for c in cliques if len(c) > 0]
     nei_list = [[] for i in range(n_atoms)]
     for i in range(len(cliques)):
@@ -113,10 +115,10 @@ def tree_decomp(mol):
     #Build edges and add singleton cliques
     edges = defaultdict(int)
     for atom in range(n_atoms):
-        if len(nei_list[atom]) <= 1: 
+        if len(nei_list[atom]) <= 1:                            #Ignore atom exist in only 1 clique
             continue
         cnei = nei_list[atom]
-        bonds = [c for c in cnei if len(cliques[c]) == 2]
+        bonds = [c for c in cnei if len(cliques[c]) == 2]       
         rings = [c for c in cnei if len(cliques[c]) > 4]
         if len(bonds) > 2 or (len(bonds) == 2 and len(cnei) > 2): #In general, if len(cnei) >= 3, a singleton should be added, but 1 bond + 2 ring is currently not dealt with.
             cliques.append([atom])
@@ -143,8 +145,8 @@ def tree_decomp(mol):
     #Compute Maximum Spanning Tree
     row,col,data = list(zip(*edges))
     n_clique = len(cliques)
-    clique_graph = csr_matrix( (data,(row,col)), shape=(n_clique,n_clique) )
-    junc_tree = minimum_spanning_tree(clique_graph)
+    clique_graph = csr_matrix( (data,(row,col)), shape=(n_clique,n_clique) )        #Compressed Sparse Row matrix => just like a normal csv file
+    junc_tree = minimum_spanning_tree(clique_graph)                                 # tree that connects all the cliques with the minimum total edge weight.
     row,col = junc_tree.nonzero()
     edges = [(row[i],col[i]) for i in range(len(row))]
     return (cliques, edges)
